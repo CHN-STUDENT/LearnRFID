@@ -8,6 +8,7 @@ MFRC522 rfid(SS_PIN, RST_PIN); //实例化类
 byte nuidPICC[4];
 //主卡ID数组
 byte masterCardID[4]={0x59,0x94,0xC1,0x8E};
+byte deleteCardID[4]={0x5B,0x63,0x43,0x0A};
 //蓝卡ID结构体
 struct CardStruct {
   byte nuidPICC[4];
@@ -19,6 +20,7 @@ CardStruct card2;
 CardStruct card3;
 CardStruct card4;
 bool flag = false; //是否刷了白卡
+bool deleteFlag = false; //是否刷了删除卡
 
 void setup() {
    pinMode(6, OUTPUT);
@@ -56,6 +58,27 @@ void loop() {
       Serial.println("白卡已刷，开启蓝卡写入");
       flag = true;
     }
+  } else if(isDelete(nuidPICC)==true) {
+     index=1;
+     for (int i = 0 ; i < EEPROM.length() ; i++) {
+       EEPROM.write(i, 0);
+     }
+     card1.nuidPICC[0]=0x00;
+     card1.nuidPICC[1]=0x00;
+     card1.nuidPICC[2]=0x00;
+     card1.nuidPICC[3]=0x00;
+     card2.nuidPICC[0]=0x00;
+     card2.nuidPICC[1]=0x00;
+     card2.nuidPICC[2]=0x00;
+     card2.nuidPICC[3]=0x00;
+     card3.nuidPICC[0]=0x00;
+     card3.nuidPICC[1]=0x00;
+     card3.nuidPICC[2]=0x00;
+     card3.nuidPICC[3]=0x00;
+     card4.nuidPICC[0]=0x00;
+     card4.nuidPICC[1]=0x00;
+     card4.nuidPICC[2]=0x00;
+     card4.nuidPICC[3]=0x00;
   } else {
     if(flag==true) {
       if(index==1) {
@@ -65,6 +88,12 @@ void loop() {
         card1.nuidPICC[3]=nuidPICC[3];
         EEPROM.put(startAddress,card1);
         Serial.println("存储位1蓝卡写入，写入值");
+        Serial.print("十六进制UID：");
+       printHex(rfid.uid.uidByte, rfid.uid.size);
+       Serial.println();
+       Serial.print("十进制UID：");
+       printDec(rfid.uid.uidByte, rfid.uid.size);
+       Serial.println();
       } else if(index==2){
         card2.nuidPICC[0]=nuidPICC[0];
         card2.nuidPICC[1]=nuidPICC[1];
@@ -72,6 +101,12 @@ void loop() {
         card2.nuidPICC[3]=nuidPICC[3];
         EEPROM.put(startAddress+sizeof(CardStruct),card2);
         Serial.println("存储位2蓝卡写入，写入值");
+        Serial.print("十六进制UID：");
+       printHex(rfid.uid.uidByte, rfid.uid.size);
+       Serial.println();
+       Serial.print("十进制UID：");
+       printDec(rfid.uid.uidByte, rfid.uid.size);
+       Serial.println();
       } else if(index==3){
         card3.nuidPICC[0]=nuidPICC[0];
         card3.nuidPICC[1]=nuidPICC[1];
@@ -79,6 +114,12 @@ void loop() {
         card3.nuidPICC[3]=nuidPICC[3];
         Serial.println("存储位3蓝卡写入，写入值");
         EEPROM.put(startAddress+2*sizeof(CardStruct),card2);
+        Serial.print("十六进制UID：");
+       printHex(rfid.uid.uidByte, rfid.uid.size);
+       Serial.println();
+       Serial.print("十进制UID：");
+       printDec(rfid.uid.uidByte, rfid.uid.size);
+       Serial.println();
       } else if(index==4){
         card4.nuidPICC[0]=nuidPICC[0];
         card4.nuidPICC[1]=nuidPICC[1];
@@ -86,18 +127,19 @@ void loop() {
         card4.nuidPICC[3]=nuidPICC[3];
         Serial.println("存储位4蓝卡写入，写入值");
         EEPROM.put(startAddress+3*sizeof(CardStruct),card2);
-      } else {
-        Serial.println("EEPROM可用存储耗尽，无法再写入");
-        //index = 1;
-      }
-       Serial.print("十六进制UID：");
+        Serial.print("十六进制UID：");
        printHex(rfid.uid.uidByte, rfid.uid.size);
        Serial.println();
        Serial.print("十进制UID：");
        printDec(rfid.uid.uidByte, rfid.uid.size);
        Serial.println();
+      } else {
+        Serial.println("EEPROM可用存储耗尽，无法再写入");
+        Serial.println("请刷删除卡之后清除数据");
+        //index = 1;
+      }
        index++;
-       delay(2000);
+       //delay(2000);
     } else {
       if(isSaveCard(nuidPICC)==-1){
          Serial.println("请刷白卡以便再次开启蓝卡写入");
@@ -152,7 +194,6 @@ int isSaveCard(byte *cradID){
     digitalWrite(6,HIGH);
     delay(2000);
     digitalWrite(6,LOW);
-    delay(300);
     return 2;
   }else if(cradID[0]==card3.nuidPICC[0]&&
   cradID[1]==card3.nuidPICC[1]&&
@@ -163,7 +204,6 @@ int isSaveCard(byte *cradID){
     digitalWrite(6,HIGH);
     delay(2000);
     digitalWrite(6,LOW);
-    delay(300);
     return 3;
   }else if(cradID[0]==card4.nuidPICC[0]&&
   cradID[1]==card4.nuidPICC[1]&&
@@ -174,16 +214,35 @@ int isSaveCard(byte *cradID){
     digitalWrite(6,HIGH);
     delay(2000);
     digitalWrite(6,LOW);
-    delay(300);
     return 4;
   }else {
     Serial.println("此卡为未知卡，白灯亮");
     digitalWrite(4,HIGH);
     delay(2000);
     digitalWrite(4,LOW);
-    delay(300);
     return -1;
   }//白灯
+}
+
+
+bool isDelete(byte *cardID) {
+  if(cardID[0]==deleteCardID[0]&&
+  cardID[1]==deleteCardID[1]&&
+  cardID[2]==deleteCardID[2]&&
+  cardID[3]==deleteCardID[3]
+  ){
+    Serial.println("此卡为删除卡，删除所有数据！");
+    digitalWrite(4,HIGH);
+    digitalWrite(5,HIGH);
+    digitalWrite(6,HIGH);
+    delay(2000);
+    digitalWrite(4,LOW);
+    digitalWrite(5,LOW);
+    digitalWrite(6,LOW);
+    return true;
+  } else {
+    return false;
+  }
 }
 
 bool isMaster(byte *cradID){
@@ -196,7 +255,6 @@ bool isMaster(byte *cradID){
     digitalWrite(5,HIGH);
     delay(2000);
     digitalWrite(5,LOW);
-    delay(300);
     return true;
   } else {
     return false;
