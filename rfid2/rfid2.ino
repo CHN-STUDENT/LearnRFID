@@ -16,7 +16,7 @@ struct CardStruct {
 int index = 1; //当前蓝卡索引值
 const int number = 4;//蓝卡数量
 int startAddress = 0; //EERPOM 开始地址
-struct CardStruct card[number+1]; //蓝卡结构体数组
+struct CardStruct card[number+1]; 
 bool flag = false; //是否刷了白卡
 bool deleteFlag = false; //是否刷了删除卡
 
@@ -117,8 +117,8 @@ void printDec(byte *buffer, byte bufferSize) {
 
 void readEEPROM()
 {
-  for(int i=0;i<number;i++){
-      EEPROM.get(startAddress+i*sizeof(CardStruct),card[i+1]);
+  for(int i=1;i<=number;i++){
+      EEPROM.get(startAddress+(i-1)*sizeof(CardStruct),card[i]);
   }
 }
 
